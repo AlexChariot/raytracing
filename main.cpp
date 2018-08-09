@@ -51,7 +51,11 @@ int main()
     list[4] = new Sphere(vec3(-1, 0, -1), -0.45, new Dielectric(1.5));
     Hitable* world = new Hitable_list(list, 5);
 
-    Camera cam(vec3(-2, 2, 1), vec3(0, 0, -1), vec3(0, 1, 0), 20, float(nx) / float(ny));
+    vec3 lookfrom(3, 3, 2);
+    vec3 lookat(0, 0, -1);
+    float dist_to_focus = (lookfrom - lookat).length();
+    float aperture = 2.0;
+    Camera cam(lookfrom, lookat, vec3(0, 1, 0), 20, float(nx) / float(ny), aperture, dist_to_focus);
 
 #ifdef MONITOR_TIME
     std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
