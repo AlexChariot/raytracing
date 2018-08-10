@@ -6,6 +6,7 @@
 #include "include/camera.h"
 #include "include/hitablelist.h"
 #include "include/material.h"
+#include "include/moving_sphere.h"
 #include "include/sphere.h"
 
 #define MONITOR_TIME
@@ -40,7 +41,8 @@ Hitable* random_scene()
             vec3 center(a + 0.9 * drand48(), 0.2, b + 0.9 * drand48());
             if ((center - vec3(4, 0.2, 0)).length() > 0.9) {
                 if (choose_mat < 0.8) {  // diffuse
-                    list[i++] = new Sphere(center, 0.2, new Lambertian(vec3(drand48() * drand48(), drand48() * drand48(), drand48() * drand48())));
+                    list[i++] = new Moving_sphere(center, center + vec3(0, 0.5 * drand48(), 0), 0.0, 1.0, 0.2,
+                                                  new Lambertian(vec3(drand48() * drand48(), drand48() * drand48(), drand48() * drand48())));
                 } else if (choose_mat < 0.95) {  // metal
                     list[i++] = new Sphere(center, 0.2,
                                            new Metal(vec3(0.5 * (1 + drand48()), 0.5 * (1 + drand48()), 0.5 * (1 + drand48())), 0.5 * drand48()));
@@ -63,7 +65,7 @@ int main()
     std::ofstream file_pgm;
     file_pgm.open("test.pgm");
 
-#if 0
+#if 1
     int nx = 400;
     int ny = 200;
     int ns = 100;
@@ -75,27 +77,33 @@ int main()
 #endif
     file_pgm << "P3\n" << nx << " " << ny << "\n255\n";
 
-    // Hitable* list[5];
+#if 1
+    Hitable* list[5];
+    float t0 = 0.0;
+    float t1 = 1.0;
+    vec3 center(0, 0, -1);
+    list[0] = new Moving_sphere(center, center + vec3(0, 0.2, 0), t0, t1, 0.5, new Lambertian(vec3(0.1, 0.2, 0.5)));
     // list[0] = new Sphere(vec3(0, 0, -1), 0.5, new Lambertian(vec3(0.1, 0.2, 0.5)));
-    // list[1] = new Sphere(vec3(0, -100.5, -1), 100, new Lambertian(vec3(0.8, 0.8, 0.0)));
-    // list[2] = new Sphere(vec3(-1, 0, -1), 0.5, new Metal(vec3(0.8, 0.6, 0.2), 0.1));
-    // list[3] = new Sphere(vec3(1, 0, -1), 0.5, new Dielectric(1.5));
-    // list[4] = new Sphere(vec3(1, 0, -1), -0.45, new Dielectric(1.5));
-    // Hitable* world = new Hitable_list(list, 5);
+    list[1] = new Sphere(vec3(0, -100.5, -1), 100, new Lambertian(vec3(0.8, 0.8, 0.0)));
+    list[2] = new Sphere(vec3(-1, 0, -1), 0.5, new Metal(vec3(0.8, 0.6, 0.2), 0.1));
+    list[3] = new Sphere(vec3(1, 0, -1), 0.5, new Dielectric(1.5));
+    list[4] = new Sphere(vec3(1, 0, -1), -0.45, new Dielectric(1.5));
+    Hitable* world = new Hitable_list(list, 5);
 
-    // vec3 lookfrom(3, 3, 2);
-    // vec3 lookat(0, 0, -1);
-    // float dist_to_focus = (lookfrom - lookat).length();
-    // float aperture = 0.1;
-    // Camera cam(lookfrom, lookat, vec3(0, 1, 0), 20, float(nx) / float(ny), aperture, dist_to_focus);
-
+    vec3 lookfrom(3, 3, 2);
+    vec3 lookat(0, 0, -1);
+    float dist_to_focus = (lookfrom - lookat).length();
+    float aperture = 0.1;
+    Camera cam(lookfrom, lookat, vec3(0, 1, 0), 20, float(nx) / float(ny), aperture, dist_to_focus, 0.0, 1.0);
+#else
     Hitable* world = world = random_scene();
 
     vec3 lookfrom(13, 2, 3);
     vec3 lookat(0, 0, 0);
     float dist_to_focus = 10.0;
     float aperture = 0.1;
-    Camera cam(lookfrom, lookat, vec3(0, 1, 0), 20, float(nx) / float(ny), aperture, dist_to_focus);
+    Camera cam(lookfrom, lookat, vec3(0, 1, 0), 20, float(nx) / float(ny), aperture, dist_to_focus, 0.0, 1.0);
+#endif
 
 #ifdef MONITOR_TIME
     std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
@@ -105,13 +113,16 @@ int main()
     for (int j = ny - 1; j >= 0; j--) {
         for (int i = 0; i < nx; i++) {
             vec3 col(0, 0, 0);
-#pragma omp parallel for
+            // #pragma omp parallel for
             for (int s = 0; s < ns; s++) {
                 float u = float(i + drand48()) / float(nx);
                 float v = float(j + drand48()) / float(ny);
                 ray r = cam.get_ray(u, v);
                 vec3 p = r.point_at_parameter(2.0);
-                col += color(r, world, 0);
+                // #pragma omp critical
+                {
+                    col += color(r, world, 0);
+                }
             }
             col /= float(ns);
             col = vec3(sqrt(col[0]), sqrt(col[1]), sqrt(col[2]));
@@ -125,7 +136,7 @@ int main()
 
 #ifdef MONITOR_TIME
     end = std::chrono::high_resolution_clock::now();
-    std::cout << "---TOTAL RENDERING TIME--- : " << std::chrono::duration<float>(end - start).count() * 1000 << "ms" << std::endl;
+    std::cout << "---TOTAL RENDERING TIME--- : " << std::chrono::duration<float>(end - start).count() << "s" << std::endl;
 #endif
 
     return 0;
