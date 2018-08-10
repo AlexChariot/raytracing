@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "float.h"
+#include "include/bvh_node.h"
 #include "include/camera.h"
 #include "include/hitablelist.h"
 #include "include/material.h"
@@ -11,11 +12,11 @@
 
 #define MONITOR_TIME
 
-vec3 color(const ray& r, Hitable* world, int depth)
+vec3 color(const Ray& r, Hitable* world, int depth)
 {
     Hit_record rec;
     if (world->hit(r, 0.001, FLT_MAX, rec)) {
-        ray scattered;
+        Ray scattered;
         vec3 attenuation;
         if (depth < 50 && rec.mat_ptr->scatter(r, rec, attenuation, scattered)) {
             return attenuation * color(scattered, world, depth + 1);
@@ -117,7 +118,7 @@ int main()
             for (int s = 0; s < ns; s++) {
                 float u = float(i + drand48()) / float(nx);
                 float v = float(j + drand48()) / float(ny);
-                ray r = cam.get_ray(u, v);
+                Ray r = cam.get_ray(u, v);
                 vec3 p = r.point_at_parameter(2.0);
                 // #pragma omp critical
                 {

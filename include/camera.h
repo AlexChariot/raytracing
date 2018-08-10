@@ -32,13 +32,13 @@ class Camera
         horizontal = 2.0 * half_width * focus_dist * u;
         vertical = 2.0 * half_height * focus_dist * v;
     }
-    ray get_ray(float s, float t)
+    Ray get_ray(float s, float t)
     {
         vec3 rd = lens_radius * random_in_unit_disk();
         vec3 offset = u * rd.x() + v * rd.y();
         float time = time0 + drand48() * (time1 - time0);
 
-        return ray(origin + offset, lower_left_corner + s * horizontal + t * vertical - origin - offset, time);
+        return Ray(origin + offset, lower_left_corner + s * horizontal + t * vertical - origin - offset, time);
     }
 
     vec3 origin;
