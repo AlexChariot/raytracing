@@ -34,7 +34,9 @@ Hitable* random_scene()
 {
     int n = 500;
     Hitable** list = new Hitable*[n + 1];
-    list[0] = new Sphere(vec3(0, -1000, 0), 1000, new Lambertian(vec3(0.5, 0.5, 0.5)));
+    Texture* checker = new Checker_texture(new Constant_texture(vec3(0.2, 0.3, 0.1)), new Constant_texture(vec3(0.9, 0.9, 0.9)));
+
+    list[0] = new Sphere(vec3(0, -1000, 0), 1000, new Lambertian(checker));
     int i = 1;
     for (int a = -11; a < 11; a++) {
         for (int b = -11; b < 11; b++) {
@@ -42,8 +44,9 @@ Hitable* random_scene()
             vec3 center(a + 0.9 * drand48(), 0.2, b + 0.9 * drand48());
             if ((center - vec3(4, 0.2, 0)).length() > 0.9) {
                 if (choose_mat < 0.8) {  // diffuse
-                    list[i++] = new Moving_sphere(center, center + vec3(0, 0.5 * drand48(), 0), 0.0, 1.0, 0.2,
-                                                  new Lambertian(vec3(drand48() * drand48(), drand48() * drand48(), drand48() * drand48())));
+                    list[i++] = new Moving_sphere(
+                        center, center + vec3(0, 0.5 * drand48(), 0), 0.0, 1.0, 0.2,
+                        new Lambertian(new Constant_texture(vec3(drand48() * drand48(), drand48() * drand48(), drand48() * drand48()))));
                 } else if (choose_mat < 0.95) {  // metal
                     list[i++] = new Sphere(center, 0.2,
                                            new Metal(vec3(0.5 * (1 + drand48()), 0.5 * (1 + drand48()), 0.5 * (1 + drand48())), 0.5 * drand48()));
@@ -55,7 +58,7 @@ Hitable* random_scene()
     }
 
     list[i++] = new Sphere(vec3(0, 1, 0), 1.0, new Dielectric(1.5));
-    list[i++] = new Sphere(vec3(-4, 1, 0), 1.0, new Lambertian(vec3(0.4, 0.2, 0.1)));
+    list[i++] = new Sphere(vec3(-4, 1, 0), 1.0, new Lambertian(new Constant_texture(vec3(0.4, 0.2, 0.1))));
     list[i++] = new Sphere(vec3(4, 1, 0), 1.0, new Metal(vec3(0.7, 0.6, 0.5), 0.0));
 
     return new Hitable_list(list, i);
@@ -78,14 +81,14 @@ int main()
 #endif
     file_pgm << "P3\n" << nx << " " << ny << "\n255\n";
 
-#if 1
+#if 0
     Hitable* list[5];
     float t0 = 0.0;
     float t1 = 1.0;
     vec3 center(0, 0, -1);
-    list[0] = new Moving_sphere(center, center + vec3(0, 0.2, 0), t0, t1, 0.5, new Lambertian(vec3(0.1, 0.2, 0.5)));
-    // list[0] = new Sphere(vec3(0, 0, -1), 0.5, new Lambertian(vec3(0.1, 0.2, 0.5)));
-    list[1] = new Sphere(vec3(0, -100.5, -1), 100, new Lambertian(vec3(0.8, 0.8, 0.0)));
+    list[0] = new Moving_sphere(center, center + vec3(0, 0.2, 0), t0, t1, 0.5, new Lambertian(new Constant_texture(vec3(0.1, 0.2, 0.5))));
+    // list[0] = new Sphere(vec3(0, 0, -1), 0.5, new Lambertian(new Constant_texture( vec3(0.1, 0.2, 0.5))));
+    list[1] = new Sphere(vec3(0, -100.5, -1), 100, new Lambertian(new Constant_texture(vec3(0.8, 0.8, 0.0))));
     list[2] = new Sphere(vec3(-1, 0, -1), 0.5, new Metal(vec3(0.8, 0.6, 0.2), 0.1));
     list[3] = new Sphere(vec3(1, 0, -1), 0.5, new Dielectric(1.5));
     list[4] = new Sphere(vec3(1, 0, -1), -0.45, new Dielectric(1.5));
