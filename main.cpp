@@ -4,6 +4,8 @@
 #include <fstream>
 #include <iostream>
 
+// #include <omp.h>
+
 #include "float.h"
 #include "include/bvh_node.h"
 #include "include/camera.h"
@@ -12,6 +14,12 @@
 #include "include/moving_sphere.h"
 #include "include/perlin.h"
 #include "include/sphere.h"
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "include/stb_image.h"
+
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "include/stb_image_write.h"
 
 #define MONITOR_TIME
 
@@ -89,6 +97,31 @@ Hitable* two_perlin_spheres()
     list[1] = new Sphere(vec3(0, 2, 0), 2, new Lambertian(pertext));
     return new Hitable_list(list, 2);
 }
+
+Hitable* two_earths()
+{
+#if 1
+    int nx, ny, nn;
+
+    unsigned char* pixels = stbi_load("earth.jpg", &nx, &ny, &nn, 0);
+
+    Texture* earth_tex = new Image_texture(pixels, nx, ny);
+
+    Hitable** list = new Hitable*[2];
+    list[0] = new Sphere(vec3(0, -15, 0), 15, new Lambertian(earth_tex));
+    list[1] = new Sphere(vec3(0, 1, 0), 1, new Lambertian(earth_tex));
+    return new Hitable_list(list, 2);
+#else
+    int nx, ny, nn;
+    unsigned char* tex_data = stbi_load("earth2.jpg", &nx, &ny, &nn, 0);
+
+    // stbi_write_bmp("tes_img_write.bmp", nx, ny, nn, tex_data);   // Test OK
+
+    Material* mat = new Lambertian(new Image_texture(tex_data, nx, ny));
+    return new Sphere(vec3(0, 0, 0), 2, mat);
+#endif
+}
+
 int main()
 {
 #if 1
@@ -140,6 +173,7 @@ int main()
     Camera cam(lookfrom, lookat, vec3(0, 1, 0), 20, float(nx) / float(ny), aperture, dist_to_focus, 0.0, 1.0);
 
 #else
+#if 0
     Hitable* world = two_perlin_spheres();
 
     vec3 lookfrom(13, 2, 3);
@@ -147,6 +181,16 @@ int main()
     float dist_to_focus = 10.0;
     float aperture = 0.0;
     Camera cam(lookfrom, lookat, vec3(0, 1, 0), 20, float(nx) / float(ny), aperture, dist_to_focus, 0.0, 1.0);
+#else
+    Hitable* world = two_earths();
+
+    vec3 lookfrom(13, 2, 3);
+    vec3 lookat(0, 0, 0);
+    float dist_to_focus = 10.0;
+    float aperture = 0.0;
+    Camera cam(lookfrom, lookat, vec3(0, 1, 0), 20, float(nx) / float(ny), aperture, dist_to_focus, 0.0, 1.0);
+
+#endif
 
 #endif
 
@@ -163,7 +207,7 @@ int main()
     start = std::chrono::high_resolution_clock::now();
 #endif
 
-#pragma omp parallel for collapse(2)
+#pragma omp parallel for collapse(2) num_threads(4)
     for (int j = ny - 1; j >= 0; j--) {
         for (int i = 0; i < nx; i++) {
             vec3 col(0, 0, 0);
@@ -190,8 +234,9 @@ int main()
             img_tab[index] = ir;
             img_tab[index + 1] = ig;
             img_tab[index + 2] = ib;
-        }
-    }
+
+        }  // i
+    }      // j
 
 #ifdef MONITOR_TIME
     end = std::chrono::high_resolution_clock::now();
