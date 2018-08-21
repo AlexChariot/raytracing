@@ -69,6 +69,17 @@ Hitable* random_scene()
     return new Hitable_list(list, i);
 }
 
+Hitable* two_spheres()
+{
+    Texture* checker = new Checker_texture(new Constant_texture(vec3(0.2, 0.3, 0.1)), new Constant_texture(vec3(0.9, 0.9, 0.9)));
+    int n = 50;
+    Hitable** list = new Hitable*[n + 1];
+    list[0] = new Sphere(vec3(0, -10, 0), 10, new Lambertian(checker));
+    list[1] = new Sphere(vec3(0, 10, 0), 10, new Lambertian(checker));
+
+    return new Hitable_list(list, 2);
+}
+
 int main()
 {
 #if 1
@@ -99,19 +110,30 @@ int main()
     vec3 lookat(0, 0, -1);
     float dist_to_focus = (lookfrom - lookat).length();
     float aperture = 0.1;
-    Camera cam(lookfrom, lookat, vec3(0, 1, 0), 20, float(nx) / float(ny), aperture, dist_to_focus, 0.0, 1.0);
+    Camera cam(lookfrom, lookat, vec3(0, 1, 0), 20, float(nx) / float(ny), aperture, dist_to_focus, 0.0, 0.1);
 #else
-    Hitable* world = world = random_scene();
+#if 1
+    Hitable* world = random_scene();
 
     vec3 lookfrom(13, 2, 3);
     vec3 lookat(0, 0, 0);
     float dist_to_focus = 10.0;
     float aperture = 0.1;
     Camera cam(lookfrom, lookat, vec3(0, 1, 0), 20, float(nx) / float(ny), aperture, dist_to_focus, 0.0, 1.0);
+#else
+    Hitable* world = two_spheres();
+
+    vec3 lookfrom(13, 2, 3);
+    vec3 lookat(0, 0, 0);
+    float dist_to_focus = 10.0;
+    float aperture = 0.0;
+    Camera cam(lookfrom, lookat, vec3(0, 1, 0), 20, float(nx) / float(ny), aperture, dist_to_focus, 0.0, 1.0);
+
+#endif
 #endif
 
     int size_img_tab = 3 * nx * ny;
-    std::cout << "size_img_tab: " << size_img_tab << std::endl;
+
     int* img_tab = new int[size_img_tab];
     memset(img_tab, 0, size_img_tab);
 
