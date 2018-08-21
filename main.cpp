@@ -7,6 +7,7 @@
 // #include <omp.h>
 
 #include "float.h"
+#include "include/aarect.h"
 #include "include/bvh_node.h"
 #include "include/camera.h"
 #include "include/hitablelist.h"
@@ -32,16 +33,13 @@ vec3 color(const Ray& r, Hitable* world, int depth)
     if (world->hit(r, 0.001, FLT_MAX, rec)) {
         Ray scattered;
         vec3 attenuation;
-        if (depth < 50 && rec.mat_ptr->scatter(r, rec, attenuation, scattered)) {
-            return attenuation * color(scattered, world, depth + 1);
-        } else {
-            return vec3(0, 0, 0);
-        }
-    } else {
-        vec3 unit_direction = unit_vector(r.direction());
-        float t = 0.5 * (unit_direction.y() + 1.0);
-        return (1.0 - t) * vec3(1.0, 1.0, 1.0) + t * vec3(0.5, 0.7, 1.0);
-    }
+        vec3 emitted = rec.mat_ptr->emitted(rec.u, rec.v, rec.p);
+        if (depth < 50 && rec.mat_ptr->scatter(r, rec, attenuation, scattered))
+            return emitted + attenuation * color(scattered, world, depth + 1);
+        else
+            return emitted;
+    } else
+        return vec3(0, 0, 0);
 }
 
 Hitable* random_scene()
@@ -112,6 +110,34 @@ Hitable* two_earths()
     return new Hitable_list(list, 2);
 }
 
+Hitable* simple_light()
+{
+    Texture* pertext = new Noise_texture(4);
+    Hitable** list = new Hitable*[4];
+    list[0] = new Sphere(vec3(0, -1000, 0), 1000, new Lambertian(pertext));
+    list[1] = new Sphere(vec3(0, 2, 0), 2, new Lambertian(pertext));
+    list[2] = new Sphere(vec3(0, 6, 0), 1.5, new Diffuse_light(new Constant_texture(vec3(4, 4, 4))));
+    list[3] = new XY_rect(3, 5, 1, 3, -2, new Diffuse_light(new Constant_texture(vec3(4, 4, 4))));
+    return new Hitable_list(list, 4);
+}
+
+Hitable* cornell_box()
+{
+    Hitable** list = new Hitable*[8];
+    int i = 0;
+    Material* red = new Lambertian(new Constant_texture(vec3(0.65, 0.05, 0.05)));
+    Material* white = new Lambertian(new Constant_texture(vec3(0.73, 0.73, 0.73)));
+    Material* green = new Lambertian(new Constant_texture(vec3(0.12, 0.45, 0.15)));
+    Material* light = new Diffuse_light(new Constant_texture(vec3(15, 15, 15)));
+    list[i++] = new Flip_normals(new YZ_rect(0, 555, 0, 555, 555, green));
+    list[i++] = new YZ_rect(0, 555, 0, 555, 0, red);
+    list[i++] = new XZ_rect(213, 343, 227, 332, 554, light);
+    list[i++] = new Flip_normals(new XZ_rect(0, 555, 0, 555, 555, white));
+    list[i++] = new XZ_rect(0, 555, 0, 555, 0, white);
+    list[i++] = new Flip_normals(new XY_rect(0, 555, 0, 555, 555, white));
+    return new Hitable_list(list, i);
+}
+
 int main()
 {
 #if 1
@@ -121,7 +147,7 @@ int main()
 #else
     int nx = 1920;  // 1200;
     int ny = 1080;  // 600;
-    int ns = 200;   // 200;
+    int ns = 400;   // 200;
 
 #endif
 
@@ -143,8 +169,7 @@ int main()
     float dist_to_focus = (lookfrom - lookat).length();
     float aperture = 0.1;
     Camera cam(lookfrom, lookat, vec3(0, 1, 0), 20, float(nx) / float(ny), aperture, dist_to_focus, 0.0, 0.1);
-#else
-#if 0
+#elif 0
     Hitable* world = random_scene();
 
     vec3 lookfrom(13, 2, 3);
@@ -152,8 +177,7 @@ int main()
     float dist_to_focus = 10.0;
     float aperture = 0.1;
     Camera cam(lookfrom, lookat, vec3(0, 1, 0), 20, float(nx) / float(ny), aperture, dist_to_focus, 0.0, 1.0);
-#else
-#if 0
+#elif 0
     Hitable* world = two_spheres();
 
     vec3 lookfrom(13, 2, 3);
@@ -162,8 +186,7 @@ int main()
     float aperture = 0.0;
     Camera cam(lookfrom, lookat, vec3(0, 1, 0), 20, float(nx) / float(ny), aperture, dist_to_focus, 0.0, 1.0);
 
-#else
-#if 0
+#elif 0
     Hitable* world = two_perlin_spheres();
 
     vec3 lookfrom(13, 2, 3);
@@ -171,7 +194,7 @@ int main()
     float dist_to_focus = 10.0;
     float aperture = 0.0;
     Camera cam(lookfrom, lookat, vec3(0, 1, 0), 20, float(nx) / float(ny), aperture, dist_to_focus, 0.0, 1.0);
-#else
+#elif 0
     Hitable* world = two_earths();
 
     vec3 lookfrom(13, 2, 3);
@@ -179,12 +202,24 @@ int main()
     float dist_to_focus = 10.0;
     float aperture = 0.0;
     Camera cam(lookfrom, lookat, vec3(0, 1, 0), 20, float(nx) / float(ny), aperture, dist_to_focus, 0.0, 1.0);
+#elif 0
+    Hitable* world = simple_light();
 
-#endif
+    vec3 lookfrom(13, 2, 3);
+    vec3 lookat(0, 1, 0);
+    float dist_to_focus = 10.0;
+    float aperture = 0.0;
+    Camera cam(lookfrom, lookat, vec3(0, 1.5, 0), 40, float(nx) / float(ny), aperture, dist_to_focus, 0.0, 1.0);
+#else
+    Hitable* world = cornell_box();
+    vec3 lookfrom(278, 278, -800);
+    vec3 lookat(278, 278, 0);
+    float dist_to_focus = 10.0;
+    float aperture = 0.0;
+    float vfov = 35;
 
-#endif
+    Camera cam(lookfrom, lookat, vec3(0, 1, 0), vfov, float(nx) / float(ny), aperture, dist_to_focus, 0.0, 1.0);
 
-#endif
 #endif
 
     int size_img_tab = 3 * nx * ny;
