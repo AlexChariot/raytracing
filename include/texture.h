@@ -1,6 +1,8 @@
 #ifndef TEXTUREH
 #define TEXTUREH
 
+#include "perlin.h"
+
 class Texture
 {
   public:
@@ -31,6 +33,21 @@ class Checker_texture : public Texture
     }
     Texture* odd;
     Texture* even;
+};
+
+class Noise_texture : public Texture
+{
+  public:
+    Noise_texture() {}
+    Noise_texture(float sc) : scale(sc) {}
+    virtual vec3 value(float u, float v, const vec3& p) const
+    {
+        // return vec3(1, 1, 1) * noise.turb(scale * p);
+        // return vec3(1, 1, 1) * 0.5 * (1 + noise.turb(scale * p));
+        return vec3(1, 1, 1) * 0.5 * (1 + sin(scale * p.z() + 10 * noise.turb(p)));
+    }
+    Perlin noise;
+    float scale;
 };
 
 #endif

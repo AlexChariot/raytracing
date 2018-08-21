@@ -10,6 +10,7 @@
 #include "include/hitablelist.h"
 #include "include/material.h"
 #include "include/moving_sphere.h"
+#include "include/perlin.h"
 #include "include/sphere.h"
 
 #define MONITOR_TIME
@@ -80,6 +81,14 @@ Hitable* two_spheres()
     return new Hitable_list(list, 2);
 }
 
+Hitable* two_perlin_spheres()
+{
+    Texture* pertext = new Noise_texture(4);
+    Hitable** list = new Hitable*[2];
+    list[0] = new Sphere(vec3(0, -1000, 0), 1000, new Lambertian(pertext));
+    list[1] = new Sphere(vec3(0, 2, 0), 2, new Lambertian(pertext));
+    return new Hitable_list(list, 2);
+}
 int main()
 {
 #if 1
@@ -89,7 +98,7 @@ int main()
 #else
     int nx = 1920;  // 1200;
     int ny = 1080;  // 600;
-    int ns = 400;   // 200;
+    int ns = 200;   // 200;
 
 #endif
 
@@ -112,7 +121,7 @@ int main()
     float aperture = 0.1;
     Camera cam(lookfrom, lookat, vec3(0, 1, 0), 20, float(nx) / float(ny), aperture, dist_to_focus, 0.0, 0.1);
 #else
-#if 1
+#if 0
     Hitable* world = random_scene();
 
     vec3 lookfrom(13, 2, 3);
@@ -121,6 +130,7 @@ int main()
     float aperture = 0.1;
     Camera cam(lookfrom, lookat, vec3(0, 1, 0), 20, float(nx) / float(ny), aperture, dist_to_focus, 0.0, 1.0);
 #else
+#if 0
     Hitable* world = two_spheres();
 
     vec3 lookfrom(13, 2, 3);
@@ -128,6 +138,17 @@ int main()
     float dist_to_focus = 10.0;
     float aperture = 0.0;
     Camera cam(lookfrom, lookat, vec3(0, 1, 0), 20, float(nx) / float(ny), aperture, dist_to_focus, 0.0, 1.0);
+
+#else
+    Hitable* world = two_perlin_spheres();
+
+    vec3 lookfrom(13, 2, 3);
+    vec3 lookat(0, 0, 0);
+    float dist_to_focus = 10.0;
+    float aperture = 0.0;
+    Camera cam(lookfrom, lookat, vec3(0, 1, 0), 20, float(nx) / float(ny), aperture, dist_to_focus, 0.0, 1.0);
+
+#endif
 
 #endif
 #endif
