@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <string.h>
 #include <chrono>
 #include <fstream>
 #include <iostream>
@@ -12,6 +14,9 @@
 
 #define MONITOR_TIME
 
+/*
+ * Compute final color of a pixel
+ */
 vec3 color(const Ray& r, Hitable* world, int depth)
 {
     Hit_record rec;
@@ -66,9 +71,6 @@ Hitable* random_scene()
 
 int main()
 {
-    std::ofstream file_pgm;
-    file_pgm.open("test.pgm");
-
 #if 1
     int nx = 400;
     int ny = 200;
@@ -79,7 +81,6 @@ int main()
     int ns = 400;   // 200;
 
 #endif
-    file_pgm << "P3\n" << nx << " " << ny << "\n255\n";
 
 #if 0
     Hitable* list[5];
@@ -109,15 +110,20 @@ int main()
     Camera cam(lookfrom, lookat, vec3(0, 1, 0), 20, float(nx) / float(ny), aperture, dist_to_focus, 0.0, 1.0);
 #endif
 
+    int size_img_tab = 3 * nx * ny;
+    std::cout << "size_img_tab: " << size_img_tab << std::endl;
+    int* img_tab = new int[size_img_tab];
+    memset(img_tab, 0, size_img_tab);
+
 #ifdef MONITOR_TIME
     std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
     start = std::chrono::high_resolution_clock::now();
 #endif
 
+#pragma omp parallel for collapse(2)
     for (int j = ny - 1; j >= 0; j--) {
         for (int i = 0; i < nx; i++) {
             vec3 col(0, 0, 0);
-            // #pragma omp parallel for
             for (int s = 0; s < ns; s++) {
                 float u = float(i + drand48()) / float(nx);
                 float v = float(j + drand48()) / float(ny);
@@ -133,15 +139,38 @@ int main()
             int ir = int(255.99 * col[0]);
             int ig = int(255.99 * col[1]);
             int ib = int(255.99 * col[2]);
-            file_pgm << ir << " " << ig << " " << ib << "\n";
+            // file_pgm << ir << " " << ig << " " << ib << "\n";
+
+            int jj = -j + ny - 1;
+            int ii = i;
+            int index = 3 * (jj * nx + ii);
+            img_tab[index] = ir;
+            img_tab[index + 1] = ig;
+            img_tab[index + 2] = ib;
         }
+    }
+
+#ifdef MONITOR_TIME
+    end = std::chrono::high_resolution_clock::now();
+    std::cout << "---TOTAL RENDERING TIME--- : " << std::chrono::duration<float>(end - start).count() << "s" << std::endl;
+    start = std::chrono::high_resolution_clock::now();
+#endif
+
+    // File writing
+    std::ofstream file_pgm;
+    file_pgm.open("test.pgm");
+    file_pgm << "P3\n" << nx << " " << ny << "\n255\n";
+    for (int i = 0; i < nx * ny; i++) {
+        // std::cout << img_tab[3 * i] << " " << img_tab[3 * i + 1] << " " << img_tab[3 * i + 2] << "\n";
+        file_pgm << img_tab[3 * i] << " " << img_tab[3 * i + 1] << " " << img_tab[3 * i + 2] << "\n";
     }
     file_pgm.close();
 
 #ifdef MONITOR_TIME
     end = std::chrono::high_resolution_clock::now();
-    std::cout << "---TOTAL RENDERING TIME--- : " << std::chrono::duration<float>(end - start).count() << "s" << std::endl;
+    std::cout << "---TOTAL WRITING TIME--- : " << std::chrono::duration<float>(end - start).count() << "s" << std::endl;
 #endif
 
+    delete[] img_tab;
     return 0;
 }
