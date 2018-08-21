@@ -100,26 +100,13 @@ Hitable* two_perlin_spheres()
 
 Hitable* two_earths()
 {
-#if 1
     int nx, ny, nn;
-
     unsigned char* pixels = stbi_load("earth.jpg", &nx, &ny, &nn, 0);
-
     Texture* earth_tex = new Image_texture(pixels, nx, ny);
-
     Hitable** list = new Hitable*[2];
     list[0] = new Sphere(vec3(0, -15, 0), 15, new Lambertian(earth_tex));
     list[1] = new Sphere(vec3(0, 1, 0), 1, new Lambertian(earth_tex));
     return new Hitable_list(list, 2);
-#else
-    int nx, ny, nn;
-    unsigned char* tex_data = stbi_load("earth2.jpg", &nx, &ny, &nn, 0);
-
-    // stbi_write_bmp("tes_img_write.bmp", nx, ny, nn, tex_data);   // Test OK
-
-    Material* mat = new Lambertian(new Image_texture(tex_data, nx, ny));
-    return new Sphere(vec3(0, 0, 0), 2, mat);
-#endif
 }
 
 int main()
