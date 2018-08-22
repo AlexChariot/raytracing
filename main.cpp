@@ -8,6 +8,7 @@
 
 #include "float.h"
 #include "include/aarect.h"
+#include "include/box.h"
 #include "include/bvh_node.h"
 #include "include/camera.h"
 #include "include/hitablelist.h"
@@ -135,6 +136,8 @@ Hitable* cornell_box()
     list[i++] = new Flip_normals(new XZ_rect(0, 555, 0, 555, 555, white));
     list[i++] = new XZ_rect(0, 555, 0, 555, 0, white);
     list[i++] = new Flip_normals(new XY_rect(0, 555, 0, 555, 555, white));
+    list[i++] = new Box(vec3(130, 0, 65), vec3(295, 165, 230), white);
+    list[i++] = new Box(vec3(265, 0, 295), vec3(430, 330, 460), white);
     return new Hitable_list(list, i);
 }
 
@@ -143,7 +146,7 @@ int main()
 #if 1
     int nx = 400;
     int ny = 200;
-    int ns = 100;
+    int ns = 400;
 #else
     int nx = 1920;  // 1200;
     int ny = 1080;  // 600;
