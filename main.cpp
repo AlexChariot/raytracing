@@ -130,14 +130,18 @@ Hitable* cornell_box()
     Material* white = new Lambertian(new Constant_texture(vec3(0.73, 0.73, 0.73)));
     Material* green = new Lambertian(new Constant_texture(vec3(0.12, 0.45, 0.15)));
     Material* light = new Diffuse_light(new Constant_texture(vec3(15, 15, 15)));
+    // Add walls and ceil light
     list[i++] = new Flip_normals(new YZ_rect(0, 555, 0, 555, 555, green));
     list[i++] = new YZ_rect(0, 555, 0, 555, 0, red);
     list[i++] = new XZ_rect(213, 343, 227, 332, 554, light);
     list[i++] = new Flip_normals(new XZ_rect(0, 555, 0, 555, 555, white));
     list[i++] = new XZ_rect(0, 555, 0, 555, 0, white);
     list[i++] = new Flip_normals(new XY_rect(0, 555, 0, 555, 555, white));
-    list[i++] = new Box(vec3(130, 0, 65), vec3(295, 165, 230), white);
-    list[i++] = new Box(vec3(265, 0, 295), vec3(430, 330, 460), white);
+
+    // Add inside boxes
+    list[i++] = new Translate(new Rotate_y(new Box(vec3(0, 0, 0), vec3(165, 165, 165), white), -18), vec3(130, 0, 65));
+    list[i++] = new Translate(new Rotate_y(new Box(vec3(0, 0, 0), vec3(165, 330, 165), white), 15), vec3(265, 0, 295));
+
     return new Hitable_list(list, i);
 }
 
@@ -146,7 +150,7 @@ int main()
 #if 1
     int nx = 400;
     int ny = 200;
-    int ns = 400;
+    int ns = 1000;
 #else
     int nx = 1920;  // 1200;
     int ny = 1080;  // 600;
