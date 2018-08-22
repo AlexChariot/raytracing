@@ -118,6 +118,19 @@ class Dielectric : public Material
     float ref_idx;
 };
 
+class Isotropic : public Material
+{
+  public:
+    Isotropic(Texture* a) : albedo(a) {}
+    virtual bool scatter(const Ray& r_in, const Hit_record& rec, vec3& attenuation, Ray& scattered) const
+    {
+        scattered = Ray(rec.p, random_in_unit_sphere());
+        attenuation = albedo->value(rec.u, rec.v, rec.p);
+        return true;
+    }
+    Texture* albedo;
+};
+
 class Diffuse_light : public Material
 {
   public:

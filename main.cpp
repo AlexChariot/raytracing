@@ -11,6 +11,7 @@
 #include "include/box.h"
 #include "include/bvh_node.h"
 #include "include/camera.h"
+#include "include/constant_medium.h"
 #include "include/hitablelist.h"
 #include "include/material.h"
 #include "include/moving_sphere.h"
@@ -138,13 +139,74 @@ Hitable* cornell_box()
     list[i++] = new XZ_rect(0, 555, 0, 555, 0, white);
     list[i++] = new Flip_normals(new XY_rect(0, 555, 0, 555, 555, white));
 
+    // // Add inside boxes
+    // list[i++] = new Translate(new Rotate_y(new Box(vec3(0, 0, 0), vec3(165, 165, 165), white), -18), vec3(130, 0, 65));
+    // list[i++] = new Translate(new Rotate_y(new Box(vec3(0, 0, 0), vec3(165, 330, 165), white), 15), vec3(265, 0, 295));
+
     // Add inside boxes
-    list[i++] = new Translate(new Rotate_y(new Box(vec3(0, 0, 0), vec3(165, 165, 165), white), -18), vec3(130, 0, 65));
-    list[i++] = new Translate(new Rotate_y(new Box(vec3(0, 0, 0), vec3(165, 330, 165), white), 15), vec3(265, 0, 295));
+    Hitable* b1 = new Translate(new Rotate_y(new Box(vec3(0, 0, 0), vec3(165, 165, 165), white), -18), vec3(130, 0, 65));
+    Hitable* b2 = new Translate(new Rotate_y(new Box(vec3(0, 0, 0), vec3(165, 330, 165), white), 15), vec3(265, 0, 295));
+    list[i++] = new Constant_medium(b1, 0.01, new Constant_texture(vec3(1.0, 1.0, 1.0)));
+    list[i++] = new Constant_medium(b2, 0.01, new Constant_texture(vec3(0.0, 0.0, 0.0)));
 
     return new Hitable_list(list, i);
 }
 
+Hitable* final_scene()
+{
+    int nb = 20;
+    Hitable** list = new Hitable*[30];
+    Hitable** boxlist = new Hitable*[10000];
+    Hitable** boxlist2 = new Hitable*[10000];
+
+    Material* white = new Lambertian(new Constant_texture(vec3(0.73, 0.73, 0.73)));
+    Material* ground = new Lambertian(new Constant_texture(vec3(0.48, 0.83, 0.53)));
+
+    // Ground
+    int b = 0;
+    for (int i = 0; i < nb; i++) {
+        for (int j = 0; j < nb; j++) {
+            float w = 100;
+            float x0 = -1000 + i * w;
+            float y0 = 0;
+            float z0 = -1000 + j * w;
+            float x1 = x0 + w;
+            float y1 = 100 * (drand48() + 0.01);
+            float z1 = z0 + w;
+            boxlist[b++] = new Box(vec3(x0, y0, z0), vec3(x1, y1, z1), ground);
+        }
+    }
+    int l = 0;
+    list[l++] = new Bvh_node(boxlist, b, 0, 1);
+
+    // The rest
+    Material* light = new Diffuse_light(new Constant_texture(vec3(7, 7, 7)));
+    list[l++] = new XZ_rect(123, 423, 147, 412, 554, light);
+    vec3 center(400, 400, 200);
+    list[l++] = new Moving_sphere(center, center + vec3(30, 0, 0), 0, 1, 50, new Lambertian(new Constant_texture(vec3(0.7, 0.3, 0.1))));
+    list[l++] = new Sphere(vec3(260, 150, 45), 50, new Dielectric(1.5));
+    list[l++] = new Sphere(vec3(0, 150, 145), 50, new Metal(vec3(0.8, 0.8, 0.8), 10.0));
+    Hitable* boundary = new Sphere(vec3(360, 150, 145), 70, new Dielectric(1.5));
+    list[l++] = boundary;
+    list[l++] = new Constant_medium(boundary, 0.2, new Constant_texture(vec3(0.2, 0.4, 0.9)));
+
+    boundary = new Sphere(vec3(0, 0, 0), 5000, new Dielectric(1.5));
+    list[l++] = new Constant_medium(boundary, 0.0001, new Constant_texture(vec3(1.0, 1.0, 1.0)));
+
+    int nx, ny, nn;
+    unsigned char* tex_data = stbi_load("earth.jpg", &nx, &ny, &nn, 0);
+    Material* emat = new Lambertian(new Image_texture(tex_data, nx, ny));
+    list[l++] = new Sphere(vec3(400, 200, 400), 100, emat);
+    Texture* pertext = new Noise_texture(0.1);
+    list[l++] = new Sphere(vec3(220, 280, 300), 80, new Lambertian(pertext));
+
+    int ns = 1000;
+    for (int j = 0; j < ns; j++) {
+        boxlist2[j] = new Sphere(vec3(165 * drand48(), 165 * drand48(), 165 * drand48()), 10, white);
+    }
+    list[l++] = new Translate(new Rotate_y(new Bvh_node(boxlist2, ns, 0.0, 1.0), 15), vec3(-100, 270, 395));
+    return new Hitable_list(list, l);
+}
 int main()
 {
 #if 1
@@ -238,6 +300,7 @@ int main()
     std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
     start = std::chrono::high_resolution_clock::now();
 #endif
+    int jref = 0;
 
 #pragma omp parallel for collapse(2) num_threads(4)
     for (int j = ny - 1; j >= 0; j--) {
