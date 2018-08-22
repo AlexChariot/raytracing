@@ -194,7 +194,7 @@ Hitable* final_scene()
     list[l++] = new Constant_medium(boundary, 0.0001, new Constant_texture(vec3(1.0, 1.0, 1.0)));
 
     int nx, ny, nn;
-    unsigned char* tex_data = stbi_load("earth.jpg", &nx, &ny, &nn, 0);
+    unsigned char* tex_data = stbi_load("assets/earth.jpg", &nx, &ny, &nn, 0);
     Material* emat = new Lambertian(new Image_texture(tex_data, nx, ny));
     list[l++] = new Sphere(vec3(400, 200, 400), 100, emat);
     Texture* pertext = new Noise_texture(0.1);
@@ -216,7 +216,7 @@ int main()
 #else
     int nx = 1920;  // 1200;
     int ny = 1080;  // 600;
-    int ns = 400;   // 200;
+    int ns = 600;   // 200;
 
 #endif
 
@@ -279,8 +279,17 @@ int main()
     float dist_to_focus = 10.0;
     float aperture = 0.0;
     Camera cam(lookfrom, lookat, vec3(0, 1.5, 0), 40, float(nx) / float(ny), aperture, dist_to_focus, 0.0, 1.0);
-#else
+#elif 0
     Hitable* world = cornell_box();
+    vec3 lookfrom(278, 278, -800);
+    vec3 lookat(278, 278, 0);
+    float dist_to_focus = 10.0;
+    float aperture = 0.0;
+    float vfov = 35;
+
+    Camera cam(lookfrom, lookat, vec3(0, 1, 0), vfov, float(nx) / float(ny), aperture, dist_to_focus, 0.0, 1.0);
+#else
+    Hitable* world = final_scene();
     vec3 lookfrom(278, 278, -800);
     vec3 lookat(278, 278, 0);
     float dist_to_focus = 10.0;
