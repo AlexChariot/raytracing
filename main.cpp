@@ -30,26 +30,26 @@
  */
 vec3 color(const Ray& r, Hitable* world, int depth)
 {
-    Hit_record rec;
-    if (world->hit(r, 0.001, FLT_MAX, rec)) {
+    Hit_record hrec;
+    if (world->hit(r, 0.001, FLT_MAX, hrec)) {
         Ray scattered;
         vec3 attenuation;
-        vec3 emitted = rec.mat_ptr->emitted(rec.u, rec.v, rec.p);
+        vec3 emitted = hrec.mat_ptr->emitted(r, hrec, hrec.u, hrec.v, hrec.p);
         float pdf;
         vec3 albedo;
-        if (depth < 50 && rec.mat_ptr->scatter(r, rec, albedo, scattered, pdf)) {
-            // return emitted + albedo * rec.mat_ptr->scattering_pdf(r, rec, scattered) * color(scattered, world, depth + 1) / pdf;
+        if (depth < 50 && hrec.mat_ptr->scatter(r, hrec, albedo, scattered, pdf)) {
+            // return emitted + albedo * hrec.mat_ptr->scattering_pdf(r, hrec, scattered) * color(scattered, world, depth + 1) / pdf;
             vec3 on_light = vec3(213 + drand48() * (343 - 213), 554, 227 + drand48() * (332 - 227));
-            vec3 to_light = on_light - rec.p;
+            vec3 to_light = on_light - hrec.p;
             float distance_squared = to_light.squared_length();
             to_light.make_unit_vector();
-            if (dot(to_light, rec.normal) < 0) return emitted;
+            if (dot(to_light, hrec.normal) < 0) return emitted;
             float light_area = (343 - 213) * (332 - 227);
             float light_cosine = fabs(to_light.y());
             if (light_cosine < 0.000001) return emitted;
             pdf = distance_squared / (light_cosine * light_area);
-            scattered = Ray(rec.p, to_light, r.time());
-            return emitted + albedo * rec.mat_ptr->scattering_pdf(r, rec, scattered) * color(scattered, world, depth + 1) / pdf;
+            scattered = Ray(hrec.p, to_light, r.time());
+            return emitted + albedo * hrec.mat_ptr->scattering_pdf(r, hrec, scattered) * color(scattered, world, depth + 1) / pdf;
         } else
             return emitted;
     } else
@@ -257,7 +257,7 @@ int main()
 #else
     int nx = 1920;  // 1200;
     int ny = 1080;  // 600;
-    int ns = 600;   // 200;
+    int ns = 20;    // 200;
 
 #endif
 
