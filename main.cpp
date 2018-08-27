@@ -5,7 +5,6 @@
 #include <iostream>
 
 // #include <omp.h>
-
 #include "float.h"
 #include "include/aarect.h"
 #include "include/box.h"
@@ -36,9 +35,22 @@ vec3 color(const Ray& r, Hitable* world, int depth)
         Ray scattered;
         vec3 attenuation;
         vec3 emitted = rec.mat_ptr->emitted(rec.u, rec.v, rec.p);
-        if (depth < 50 && rec.mat_ptr->scatter(r, rec, attenuation, scattered))
-            return emitted + attenuation * color(scattered, world, depth + 1);
-        else
+        float pdf;
+        vec3 albedo;
+        if (depth < 50 && rec.mat_ptr->scatter(r, rec, albedo, scattered, pdf)) {
+            // return emitted + albedo * rec.mat_ptr->scattering_pdf(r, rec, scattered) * color(scattered, world, depth + 1) / pdf;
+            vec3 on_light = vec3(213 + drand48() * (343 - 213), 554, 227 + drand48() * (332 - 227));
+            vec3 to_light = on_light - rec.p;
+            float distance_squared = to_light.squared_length();
+            to_light.make_unit_vector();
+            if (dot(to_light, rec.normal) < 0) return emitted;
+            float light_area = (343 - 213) * (332 - 227);
+            float light_cosine = fabs(to_light.y());
+            if (light_cosine < 0.000001) return emitted;
+            pdf = distance_squared / (light_cosine * light_area);
+            scattered = Ray(rec.p, to_light, r.time());
+            return emitted + albedo * rec.mat_ptr->scattering_pdf(r, rec, scattered) * color(scattered, world, depth + 1) / pdf;
+        } else
             return emitted;
     } else
         return vec3(0, 0, 0);
@@ -152,6 +164,35 @@ Hitable* cornell_box()
     return new Hitable_list(list, i);
 }
 
+Hitable* cornell_box(Hitable** scene, Camera** cam, float aspect)
+{
+    int i = 0;
+    Hitable** list = new Hitable*[8];
+    Material* red = new Lambertian(new Constant_texture(vec3(0.65, 0.05, 0.05)));
+    Material* white = new Lambertian(new Constant_texture(vec3(0.73, 0.73, 0.73)));
+    Material* green = new Lambertian(new Constant_texture(vec3(0.12, 0.45, 0.15)));
+    Material* light = new Diffuse_light(new Constant_texture(vec3(15, 15, 15)));
+    // Add walls and ceil light
+    list[i++] = new Flip_normals(new YZ_rect(0, 555, 0, 555, 555, green));
+    list[i++] = new YZ_rect(0, 555, 0, 555, 0, red);
+    list[i++] = new XZ_rect(213, 343, 227, 332, 554, light);
+    list[i++] = new Flip_normals(new XZ_rect(0, 555, 0, 555, 555, white));
+    list[i++] = new XZ_rect(0, 555, 0, 555, 0, white);
+    list[i++] = new Flip_normals(new XY_rect(0, 555, 0, 555, 555, white));
+
+    // Add inside boxes
+    list[i++] = new Translate(new Rotate_y(new Box(vec3(0, 0, 0), vec3(165, 165, 165), white), -18), vec3(130, 0, 65));
+    list[i++] = new Translate(new Rotate_y(new Box(vec3(0, 0, 0), vec3(165, 330, 165), white), 15), vec3(265, 0, 295));
+
+    *scene = new Hitable_list(list, i);
+    vec3 lookfrom(278, 278, -800);
+    vec3 lookat(278, 278, 0);
+    float dist_to_focus = 10.0;
+    float aperture = 0.0;
+    float vfov = 40;
+    *cam = new Camera(lookfrom, lookat, vec3(0, 1, 0), vfov, aspect, aperture, dist_to_focus, 0.0, 1.0);
+}
+
 Hitable* final_scene()
 {
     int nb = 20;
@@ -210,9 +251,9 @@ Hitable* final_scene()
 int main()
 {
 #if 1
-    int nx = 400;
-    int ny = 200;
-    int ns = 1000;
+    int nx = 500;
+    int ny = 500;
+    int ns = 10;
 #else
     int nx = 1920;  // 1200;
     int ny = 1080;  // 600;
@@ -288,7 +329,7 @@ int main()
     float vfov = 35;
 
     Camera cam(lookfrom, lookat, vec3(0, 1, 0), vfov, float(nx) / float(ny), aperture, dist_to_focus, 0.0, 1.0);
-#else
+#elif 0
     Hitable* world = final_scene();
     vec3 lookfrom(278, 278, -800);
     vec3 lookat(278, 278, 0);
@@ -297,6 +338,12 @@ int main()
     float vfov = 35;
 
     Camera cam(lookfrom, lookat, vec3(0, 1, 0), vfov, float(nx) / float(ny), aperture, dist_to_focus, 0.0, 1.0);
+
+#else
+
+    Hitable* world;
+    Camera* cam;
+    cornell_box(&world, &cam, float(nx) / float(ny));
 
 #endif
 
@@ -318,7 +365,7 @@ int main()
             for (int s = 0; s < ns; s++) {
                 float u = float(i + drand48()) / float(nx);
                 float v = float(j + drand48()) / float(ny);
-                Ray r = cam.get_ray(u, v);
+                Ray r = cam->get_ray(u, v);
                 vec3 p = r.point_at_parameter(2.0);
                 // #pragma omp critical
                 {

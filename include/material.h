@@ -4,6 +4,7 @@
 struct Hit_record;
 
 #include "hitable.h"
+#include "onb.h"
 #include "ray.h"
 #include "texture.h"
 
@@ -23,6 +24,17 @@ vec3 random_in_unit_sphere()
     return p;
 }
 
+vec3 random_cosine_direction()
+{
+    float r1 = drand48();
+    float r2 = drand48();
+    float z = sqrt(1 - r2);
+    float phi = 2 * M_PI * r1;
+    float x = cos(phi) * 2 * sqrt(r2);
+    float y = sin(phi) * 2 * sqrt(r2);
+    return vec3(x, y, z);
+}
+
 vec3 reflect(const vec3& v, const vec3& n) { return v - 2 * dot(v, n) * n; }
 bool refract(const vec3& v, const vec3& n, float ni_over_nt, vec3& refracted)
 {
@@ -38,7 +50,8 @@ bool refract(const vec3& v, const vec3& n, float ni_over_nt, vec3& refracted)
 class Material
 {
   public:
-    virtual bool scatter(const Ray& r_in, const Hit_record& rec, vec3& attenuation, Ray& scattered) const = 0;
+    virtual bool scatter(const Ray& r_in, const Hit_record& rec, vec3& albedo, Ray& scattered, float& pdf) const { return false; };
+    virtual float scattering_pdf(const Ray& r_in, const Hit_record& rec, const Ray& scattered) const { return false; }
     virtual vec3 emitted(float u, float v, const vec3& p) const { return vec3(0, 0, 0); }
 };
 
@@ -46,13 +59,42 @@ class Lambertian : public Material
 {
   public:
     Lambertian(Texture* a) : albedo(a) {}
-    virtual bool scatter(const Ray& r_in, const Hit_record& rec, vec3& attenuation, Ray& scattered) const
+    float scattering_pdf(const Ray& r_in, const Hit_record& rec, const Ray& scattered) const
     {
-        vec3 target = rec.p + rec.normal + random_in_unit_sphere();
-        scattered = Ray(rec.p, target - rec.p);
-        attenuation = albedo->value(rec.u, rec.v, rec.p);
+        float cosine = dot(rec.normal, unit_vector(scattered.direction()));
+        if (cosine < 0) return 0;
+        return cosine / M_PI;
+    }
+
+    virtual bool scatter(const Ray& r_in, const Hit_record& rec, vec3& alb, Ray& scattered, float& pdf) const
+    {
+        // // Old version
+        // vec3 target = rec.p + rec.normal + random_in_unit_sphere();
+        // scattered = Ray(rec.p, unit_vector(target - rec.p), r_in.time());
+        // alb = albedo->value(rec.u, rec.v, rec.p);
+        // pdf = dot(rec.normal, scattered.direction()) / M_PI;
+        // return true;
+
+        // // New version
+        // vec3 direction;
+        // do {
+        //     direction = random_in_unit_sphere();
+        // } while (dot(direction, rec.normal) < 0);
+        // scattered = Ray(rec.p, unit_vector(direction), r_in.time());
+        // alb = albedo->value(rec.u, rec.v, rec.p);
+        // pdf = 0.5 / M_PI;
+        // return true;
+
+        // New new version
+        Onb uvw;
+        uvw.build_from_w(rec.normal);
+        vec3 direction = uvw.local(random_cosine_direction());
+        scattered = Ray(rec.p, unit_vector(direction), r_in.time());
+        alb = albedo->value(rec.u, rec.v, rec.p);
+        pdf = dot(uvw.w(), scattered.direction()) / M_PI;
         return true;
     }
+
     Texture* albedo;
 };
 
